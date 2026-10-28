@@ -1,0 +1,31 @@
+import {test,expect} from '@playwright/test';
+
+test('featured products form a continuous belt with no slide controls',async({page})=>{
+  await page.goto('/');
+  const region=page.getByRole('region',{name:'Featured products',exact:true});
+  await region.scrollIntoViewIfNeeded();await page.mouse.move(0,0);
+  await expect(region.getByRole('button')).toHaveCount(0);
+  const track=region.locator('.product-belt-track');
+  const x=()=>track.evaluate(e=>new DOMMatrix(getComputedStyle(e).transform).m41);
+  const start=await x();await page.waitForTimeout(500);const middle=await x();
+  await page.waitForTimeout(500);const end=await x();
+  expect(middle).toBeLessThan(start-5);expect(end).toBeLessThan(middle-5);
+  expect(Math.abs((middle-start)-(end-middle))).toBeLessThan(12);
+  expect(await track.evaluate(e=>getComputedStyle(e).animationTimingFunction)).toBe('linear');
+  await region.hover();
+  expect(await track.evaluate(e=>getComputedStyle(e).animationPlayState)).toBe('running');
+  const hovered=await x();await page.waitForTimeout(500);
+  expect(await x()).toBeLessThan(hovered-5);
+  const original=region.locator('.product-belt-group').first();
+  expect(await original.locator(':scope > div').count()).toBeGreaterThan(4);
+  const repeat=region.locator('.product-belt-repeat');
+  await expect(repeat).toHaveAttribute('aria-hidden','true');
+  await expect(repeat.locator('a').first()).toHaveAttribute('tabindex','-1');
+  await page.keyboard.press('Tab');
+  await original.getByRole('link').first().focus();
+  await expect.poll(()=>track.evaluate(e=>getComputedStyle(e).animationPlayState)).toBe('paused');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await expect.poll(()=>track.evaluate(e=>getComputedStyle(e).animationName)).toBe('none');
+  await expect(repeat).toBeHidden();
+});

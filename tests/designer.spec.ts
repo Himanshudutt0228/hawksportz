@@ -1,0 +1,83 @@
+import { test, expect } from "@playwright/test";
+
+test("design apparel with text, both sides, quantities and a saved draft", async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("link", { name: "Customize Your Apparel", exact: true }).click();
+  await expect(page).toHaveURL(/\/custom-apparel/, { timeout: 20000 });
+  await page.getByRole("link",{name:/^Customize /}).first().click();
+  await expect(page.getByRole("button", { name: "Add text", exact: true })).toBeDisabled();
+  await page.getByLabel("Add your text").fill("HAWK TEAM");
+  await page.getByRole("button", { name: "Add text", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Select HAWK TEAM", exact: true })).toBeVisible();
+  const textLayer = page.getByRole("button", { name: "Select HAWK TEAM", exact: true });
+  await textLayer.scrollIntoViewIfNeeded();
+  const position = await textLayer.boundingBox();
+  const transform = await textLayer.getAttribute("transform");
+  await page.mouse.move(position!.x + position!.width / 2, position!.y + position!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(position!.x + position!.width / 2, position!.y + position!.height / 2 + 30, { steps: 5 });
+  await page.mouse.up();
+  await expect(textLayer).not.toHaveAttribute("transform", transform!);
+  await page.getByRole("button", { name: "Select HAWK TEAM", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await page.getByLabel("Add your text").fill("07");
+  await page.getByRole("button", { name: "Add text", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Select 07", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Save design", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Design saved on this device");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download editable design", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("hawk-sportz-design.json");
+  await download.saveAs(testInfo.outputPath("saved-design.json"));
+  await page.reload();
+  await expect(page.getByRole("status")).toContainText("Saved design opened");
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Select 07", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Continue to sizes", exact: true }).click();
+  await page.getByRole("spinbutton", { name: "Quantity for size M", exact: true }).fill("2");
+  await page.getByRole("button", { name: "Review design", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Price summary", exact: true })).toBeVisible();
+  await expect(page.getByText("M × 2", { exact: true })).toBeVisible();
+  if (await page.getByText("Custom printing prices are not available yet.", { exact: false }).count()) {
+    await expect(page.getByRole("button", { name: "Add custom apparel to cart", exact: true })).toBeDisabled();
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("designer-review.png"), fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test("artwork upload, resizing, preview export and importing an editable design", async ({ page }, testInfo) => {
+  await page.goto("/custom-apparel?resume=1");
+  await expect(page.getByRole("button", { name: "Upload artwork", exact: true })).toBeEnabled();
+  const data = await page.evaluate(() => {
+    const canvas = document.createElement("canvas"); canvas.width = 200; canvas.height = 200;
+    const ctx = canvas.getContext("2d")!; ctx.fillStyle = "#183b32"; ctx.fillRect(0, 0, 200, 200);
+    ctx.fillStyle = "white"; ctx.font = "bold 100px Arial"; ctx.fillText("H", 60, 135);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page.getByLabel("Upload artwork file", { exact: true }).setInputFiles({ name: "team.png", mimeType: "image/png", buffer: Buffer.from(data, "base64") });
+  await expect(page.getByRole("heading", { name: "Edit artwork", exact: true })).toBeVisible();
+  await page.getByRole("slider", { name: "Element width", exact: true }).fill("100");
+  await page.getByRole("slider", { name: "Element rotation", exact: true }).fill("15");
+  await page.getByRole("button", { name: "Center", exact: true }).click();
+  const previewPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download front preview", exact: true }).click();
+  const preview = await previewPromise;
+  expect(preview.suggestedFilename()).toBe("hawk-sportz-front-preview.svg");
+  await preview.saveAs(testInfo.outputPath("preview.svg"));
+  const designPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download editable design", exact: true }).click();
+  const design = await designPromise;
+  const designPath = testInfo.outputPath("design.json"); await design.saveAs(designPath);
+  await page.reload();
+  await page.getByLabel("Open saved design file", { exact: true }).setInputFiles(designPath);
+  await expect(page.getByRole("status")).toContainText("Design file opened");
+  await expect(page.getByRole("button", { name: "Select artwork", exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("designer-artwork.png"), fullPage: true });
+});

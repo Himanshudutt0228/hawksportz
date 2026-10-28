@@ -1,0 +1,17 @@
+# Custom apparel groups
+
+Custom Apparel now opens a product grid before the editor. The unfiltered grid includes all eligible products from every group plus unassigned eligible garments, once each. Audience filters narrow the grid. Choosing a card opens its exact product in the editor and keeps the audience in the URL. Invalid/unavailable product links cannot silently open another garment. No new migration is needed for this presentation change; the audience column still needs the migration described below.
+
+Run `supabase/product-custom-audiences.sql` once as project owner after the existing product creation/editing migrations. It adds an empty `custom_audiences` text array to existing products; it does not guess assignments, alter prices/stock or enable products. Until applied, audience-filtered pages and saves cannot use this new field.
+
+In **Admin → New product**, enable the apparel designer and select any combination of Businesses, Schools, Sports teams, Clubs & groups, Restaurants & hospitality, Events. In **Edit → Apparel designer**, change the same selections and Save designer availability. The standard T-shirt/Hoodie/Jersey/Equipment category stays separate. Disabling custom availability clears audience assignments; equipment cannot be offered as custom apparel. No selection means All custom apparel only, not every group.
+
+Homepage audience cards and the custom-apparel filter bar link to `/custom-apparel?audience=business` (or schools/teams/clubs/hospitality/events). The server allowlists the parameter and uses a database array containment filter. Multiple assignments make one product available in each corresponding group. Disabled products stay excluded; unassigned legacy products remain in All custom apparel. Empty groups have a recovery link/filter. Unknown or repeated audience parameters show guidance rather than returning arbitrary products.
+
+Audience navigation starts a fresh workspace instead of automatically restoring an unrelated last-used garment. Explicit saved-design links retain existing recovery rules; browser artwork records are not deleted. This does not add custom payment/artwork production storage or establish real print prices.
+
+The migration verifies existing restrictive admin INSERT/UPDATE policies before granting only the new audience column. It further requires current confirmed membership for authenticated product writes, including after revocation. Existing public read policies still control product visibility; no service key is introduced. Database constraints reject unknown/null audience elements, equipment/non-custom assignments and excessive arrays. Server actions validate independently and update only custom availability/audiences for clothing. Normal customers cannot assign groups directly.
+
+After applying, select Businesses and Sports teams for a custom clothing product. Verify it appears in both groups and All; uncheck Businesses, save and verify it disappears only there. Check an unassigned product stays in All only, and disabled custom products appear in no designer group. Remote migration, actual admin save, public filters and customer/revoked-admin denial still require verification.
+
+Sweatshirts: after the headwear migration and its prerequisites, run `supabase/sweatshirt-customization.sql` to allow sweatshirt audience assignments. Enable each desired sweatshirt in Admin using the apparel designer checkbox; existing unconfigured sweatshirts stay excluded. Sweatshirts use the long-sleeve print layout.
