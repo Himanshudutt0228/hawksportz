@@ -28,7 +28,7 @@ export default async function SearchPage({ searchParams }: {
   }
   const visible = products.slice(0, searchPageSize);
   const hasNext = products.length > searchPageSize && page < 999;
-  return <main className="store-container py-12">
+  return <main className="mobile-content store-container py-12">
     <h1 className="text-4xl font-bold">Search products</h1>
     <p className="mt-4 text-gray-600">Find products by name. You can enter all or part of a name.</p>
     <ProductSearchForm query={query} label="Search products" className="mt-6 max-w-xl" />
@@ -38,7 +38,7 @@ export default async function SearchPage({ searchParams }: {
       : failed ? <DismissibleNotice tone="error" className="mt-8">Unable to search products right now. Please try again shortly.</DismissibleNotice>
       : <>
         <h2 className="mt-8 break-words text-xl font-semibold">Results for “{query}”</h2>
-        {visible.length ? <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {visible.length ? <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
           {visible.map(product => <ProductCard key={product.id} name={product.name} price={`CA$${Number(product.price).toFixed(2)}`}
             slug={product.slug} imageUrl={productViewImages(product).front ?? null} />)}
         </div> : <p className="mt-4 text-gray-600">{page > 1 ? "No products on this page. Try the first page or another search." : "No products found. Try another name or browse our categories."}</p>}

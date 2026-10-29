@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function ShippingPage() {
-  return <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
+  return <main className="mobile-content mx-auto w-full max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
     <h1 className="text-4xl font-semibold tracking-tight">Shipping &amp; pickup</h1>
     <p className="mt-5 leading-7 text-gray-600">Choose Canada-wide delivery or free local pickup at checkout. All amounts are in Canadian dollars.</p>
     <section className="mt-10 border-t border-gray-200 pt-6">

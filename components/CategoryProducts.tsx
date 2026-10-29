@@ -25,7 +25,7 @@ export default async function CategoryProducts({
   const products=style?(data??[]).filter(product=>product.garment_style===style):data;
 
   return (
-    <main className="store-container py-12">
+    <main className="mobile-content store-container py-12">
       {cover && <div className="relative mb-8 h-56 overflow-hidden rounded-xl sm:h-72"><Image src={cover.url} alt={cover.alt} fill sizes="100vw" className="object-cover" /></div>}
       <h1 className="text-4xl font-bold">{title}</h1>
       <p className="mt-4 text-gray-600">{description}</p>
@@ -35,7 +35,7 @@ export default async function CategoryProducts({
           Unable to load products right now. Please try again later.
         </DismissibleNotice>
       ) : products?.length ? (
-        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
           {products.map((product) => (
             <ProductCard
               key={product.id}

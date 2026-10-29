@@ -11,14 +11,14 @@ export default async function AccountPage() {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user?.email_confirmed_at) redirect("/sign-in");
   const isAdmin = await hasAdminAccess(supabase, data.user.id);
-  return <main className="mx-auto w-full max-w-3xl px-5 py-12">
+  return <main className="mobile-content mx-auto w-full max-w-3xl px-5 py-12">
     <h1 className="text-3xl font-semibold">Your account</h1>
     <p className="mt-4 text-gray-600">Signed in as {data.user.email}</p>
-    <div className="mt-6 flex flex-wrap gap-5 text-sm underline">
-      <Link href="/account/orders">Your orders</Link>
-      <Link href="/product">Shop products</Link>
-      <Link href="/reset-password">Change password</Link>
-      {isAdmin && <Link href="/admin">Admin dashboard</Link>}
+    <div className="mt-6 flex flex-wrap gap-3 text-sm">
+      <Link href="/account/orders" className="nav-button">Your orders</Link>
+      <Link href="/product" className="nav-button">Shop products</Link>
+      <Link href="/reset-password" className="nav-button">Change password</Link>
+      {isAdmin && <Link href="/admin" className="nav-button">Admin dashboard</Link>}
     </div>
     <SignOutButton />
   </main>;

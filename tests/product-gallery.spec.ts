@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 test("product gallery exposes four named views and displays each available product photo", async ({ page }) => {
-  await page.goto("/product/classic-t-shirt");
+  await page.goto("/tshirts");
+  await page.getByRole("link", { name: "View Product" }).first().click();
   const gallery = page.getByRole("region", { name: "Product images", exact: true });
   const views = gallery.getByRole("group", { name: "Product views", exact: true });
   await expect(views.getByRole("button")).toHaveCount(4);

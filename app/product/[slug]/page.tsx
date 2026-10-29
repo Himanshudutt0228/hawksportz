@@ -15,7 +15,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
   if (error) {
     return (
-      <main className="store-container py-12">
+      <main className="mobile-content store-container py-12">
         <h1 className="text-3xl font-bold">Unable to load this product</h1>
         <DismissibleNotice tone="error" className="mt-4">Please try again later.</DismissibleNotice>
         <Link href="/product" className="mt-6 inline-block underline">Back to products</Link>
@@ -30,7 +30,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
   const isClothing = ["tshirts", "hoodies", "jerseys", "beanies", "hats", "sweatshirts"].includes(product.category);
 
   return (
-    <main className="store-container py-12">
+    <main className="mobile-content store-container py-12">
       <Link href="/product" className="mb-8 inline-block text-sm underline">Back to products</Link>
       <div className="grid gap-10 md:grid-cols-2">
         <ProductGallery key={product.id} name={product.name} images={productViewImages(product)} />

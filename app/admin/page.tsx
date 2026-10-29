@@ -21,7 +21,7 @@ export default async function AdminPage({ searchParams }: {
   const products = error ? [] : (data ?? []).slice(0, pageSize);
   const hasNextPage = !error && (data?.length ?? 0) > pageSize;
   const currency = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
-  return <main className="mx-auto w-full max-w-5xl px-5 py-12">
+  return <main className="mobile-content mx-auto w-full max-w-5xl px-5 py-12">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <p className="text-sm font-medium uppercase tracking-widest text-gray-500">Hawk Sportz</p>

@@ -9,22 +9,22 @@ export const metadata: Metadata = {
 };
 
 export default function ContactPage() {
-  return <main className="store-container py-12 sm:py-16">
+  return <main className="mobile-content store-container py-12 sm:py-16">
     <div className="max-w-3xl">
       <p className="text-sm font-medium uppercase tracking-widest text-gray-500">Hawk Sportz</p>
       <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Contact &amp; pickup</h1>
-      <p className="mt-6 text-lg leading-8 text-gray-600">
+      <p className="mt-4 text-base leading-7 text-gray-600 sm:mt-6 sm:text-lg sm:leading-8">
         Collect your order locally in Kitchener, Ontario. Please wait until
         your order is ready and arrange a pickup time before visiting.
       </p>
     </div>
-    <section className="mt-10 rounded-xl border border-gray-200 p-6 sm:p-8">
+    <section className="mt-10 min-w-0 rounded-xl border border-gray-200 p-5 sm:p-8">
       <h2 className="text-2xl font-semibold tracking-tight">Email us</h2>
       <p className="mt-4 leading-7 text-gray-600">For order questions, custom apparel enquiries, returns or privacy requests, email <a href={`mailto:${storeContactEmail}`} className="break-all underline">{storeContactEmail}</a>.</p>
       <p className="mt-3 leading-7 text-gray-600">If your message concerns an order, include its reference so we can find it.</p>
     </section>
-    <div className="mt-12 grid gap-6 md:grid-cols-2">
-      <section className="rounded-xl border border-gray-200 p-6 sm:p-8">
+    <div className="mt-8 grid gap-4 sm:mt-12 sm:gap-6 md:grid-cols-2">
+      <section className="min-w-0 rounded-xl border border-gray-200 p-5 sm:p-8">
         <h2 className="text-2xl font-semibold tracking-tight">Pickup location</h2>
         <address className="mt-4 text-lg not-italic leading-8 text-gray-600">
           {pickupLocation.line1}<br />
@@ -33,7 +33,7 @@ export default function ContactPage() {
         </address>
         <p className="mt-5 leading-7 text-gray-600">Local pickup is free.</p>
       </section>
-      <section className="rounded-xl border border-gray-200 p-6 sm:p-8">
+      <section className="min-w-0 rounded-xl border border-gray-200 p-5 sm:p-8">
         <h2 className="text-2xl font-semibold tracking-tight">Before you arrive</h2>
         <p className="mt-4 leading-7 text-gray-600">Pickup hours: 10 AM–8 PM daily, Kitchener local time.</p>
         <p className="mt-4 leading-7 text-gray-600">
@@ -50,7 +50,7 @@ export default function ContactPage() {
         your account. For a guest purchase, use the order confirmation page
         in the browser where you checked out.
       </p>
-      <Link href="/account/orders" className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-brand px-5 py-3 text-sm font-medium text-on-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
+      <Link href="/account/orders" className="mt-5 inline-flex min-h-11 w-full items-center justify-center sm:mt-6 sm:w-auto rounded-lg bg-brand px-5 py-3 text-sm font-medium text-on-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
         View your orders
       </Link>
     </section>

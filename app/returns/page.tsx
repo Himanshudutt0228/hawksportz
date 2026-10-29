@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 export default function ReturnsPage() {
-  return <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
+  return <main className="mobile-content mx-auto w-full max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
     <h1 className="text-4xl font-semibold tracking-tight">Returns &amp; refunds</h1>
     <p className="mt-6 rounded-lg bg-amber-50 p-5 leading-7 text-amber-950">
       Our return policy is being finalized. Checkout currently accepts test payments only.

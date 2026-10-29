@@ -16,7 +16,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     .select("id,paid_at,delivery_method,total_cents,fulfilment_status").eq("status", "paid")
     .order("paid_at", { ascending: false }).order("id", { ascending: false }).range(start, start + pageSize);
   const orders = error ? [] : (data ?? []).slice(0, pageSize);
-  return <main className="mx-auto w-full max-w-5xl px-5 py-12">
+  return <main className="mobile-content mx-auto w-full max-w-5xl px-5 py-12">
     <Link href="/admin" className="text-sm underline">Back to dashboard</Link>
     <h1 className="mt-6 text-3xl font-semibold">Orders</h1>
     <p className="mt-3 text-sm text-amber-900">Sandbox orders only. No real money was collected.</p>

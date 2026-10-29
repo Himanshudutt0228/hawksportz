@@ -4,8 +4,12 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import GarmentPreview from "@/components/designer/GarmentPreview";
+import { standardPrintInches, measurementScale, type MeasurementUnit } from "@/lib/print-measurements";
+import DesignApprovalNotice from "@/components/designer/DesignApprovalNotice";
+import DesignProof from "@/components/designer/DesignProof";
 import LayerEditor from "@/components/designer/LayerEditor";
 import { useCart } from "@/components/CartProvider";
+import { readGarmentProof, type GarmentProof } from "@/lib/garment-proof";
 import { saveDesign, loadDesign } from "@/lib/design-storage";
 import type { CurrentProduct } from "@/lib/cart-refresh";
 import { remainingStock } from "@/lib/cart";
@@ -19,7 +23,7 @@ const primary = "rounded-lg bg-gray-950 px-5 py-3 text-sm font-medium text-white
 import {customPricingForCategory,printAreaForSize,printTemplateForProduct,quotePrintAreas,readPrintSizes,type PrintSize,type PrintSizes} from "@/lib/print-pricing";
 type StudioSnapshot = { layers: DesignLayer[]; printAreas: Partial<Record<DesignSide, PrintArea>>;printSizes?:PrintSizes };
 
-export default function DesignStudio({ products,initialProductId,catalogHref="/custom-apparel" }: { products: DesignProduct[];initialProductId?:string;catalogHref?:string }) {
+export default function DesignStudio({ products,initialProductId,catalogHref="/custom-apparel",approvalEmailsReady=false }: { products: DesignProduct[];initialProductId?:string;catalogHref?:string;approvalEmailsReady?:boolean }) {
   const { items, ready, dispatch } = useCart();
   const initialProduct=products.find(product=>product.id===initialProductId)??products[0];
   const [productId, setProductId] = useState(initialProduct?.id ?? "");
@@ -27,6 +31,7 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
   const template=printTemplateForProduct(product);
   const headwear=template==="headwear";
   const availableSides:readonly DesignSide[]=headwear?["front"]:designSides;
+  const [measurementUnit, setMeasurementUnit] = useState<MeasurementUnit>("in");
   const [colour, setColour] = useState(initialProduct?.colours[0] ?? "As pictured");
   const [history, setHistory] = useState<StudioSnapshot[]>([{ layers: [], printAreas: {} }]);
   const [cursor, setCursor] = useState(0);
@@ -47,8 +52,27 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
   const [saving, setSaving] = useState(false);
   const [restoring, setRestoring] = useState(true);
   const [text, setText] = useState("");
-  const [draftId, setDraftId] = useState<string | null>(null);
   const [approved, setApproved] = useState(false);
+  const [garmentProof, setGarmentProof] = useState<GarmentProof>();
+  const [garmentProofError, setGarmentProofError] = useState("");
+  const [proofRetry, setProofRetry] = useState(0);
+  const currentGarmentProof = garmentProof?.productId === productId ? garmentProof : undefined;
+  const previewPhotos = currentGarmentProof?.photos ?? product?.viewImages ?? {};
+  useEffect(() => {
+    if (garmentProof?.productId === productId || !productId) return;
+    const controller = new AbortController();
+    void fetch(`/api/custom-apparel/proof?product=${encodeURIComponent(productId)}`, { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error("Garment views unavailable");
+        const proof = readGarmentProof(await response.json());
+        if (!proof || proof.productId !== productId) throw new Error("Invalid garment views");
+        if (!controller.signal.aborted) { setGarmentProof(proof); setGarmentProofError(""); setApproved(false); }
+      }).catch(() => {
+        if (!controller.signal.aborted) setGarmentProofError("Unable to prepare garment previews. Check that all four product photos are available, then retry.");
+      });
+    return () => controller.abort();
+  }, [productId, garmentProof, proofRetry]);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const designInput = useRef<HTMLInputElement>(null);
   const dragStart = useRef<StudioSnapshot | null>(null);
@@ -67,6 +91,8 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
   const selectedIds = groupIds.length ? groupIds : selected ? [selected.id] : [];
   const visibleSelection = layers.filter((layer) => selectedIds.includes(layer.id) && layer.side === side);
   const selectionBox = visibleSelection.length ? selectionBounds(visibleSelection) : null;
+  const printInches = standardPrintInches(side, printSizes[side] ?? "large", template);
+  const displayScale = measurementScale( printInches, measurementUnit);
   const totalQuantity = quantityTotal(quantities);
   const sides = printedSides(layers);
   const validDesign = layers.length > 0 && !layers.some((layer) => layer.kind === "text" && !layer.text?.trim());
@@ -74,7 +100,7 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
   const available = product ? Math.max(0, product.stock - used) : 0;
   const pricing=product?customPricingForCategory(product.category,product.price):null;
   const price=quotePrintAreas(pricing,sides,printSizes,totalQuantity);
-  const canOrder = !!product && ready && !!price && validDesign && totalQuantity > 0 && totalQuantity <= available
+  const canOrder = !!currentGarmentProof && !!product && ready && !!price && validDesign && totalQuantity > 0 && totalQuantity <= available
     && Object.entries(quantities).every(([size, quantity]) => quantity === 0 ||
       (product.sizes.includes(size) && quantity <= remainingStock(items, product, size)));
 
@@ -105,7 +131,7 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
             setSide("front");
             setColour(savedProduct.colours.includes(design.colour) ? design.colour : savedProduct.colours[0]);
             const areas=Object.fromEntries(designSides.map(view=>[view,printAreaForSize(view,design.printSizes?.[view]??"large",design.printAreas?.[view],printTemplateForProduct(savedProduct))])) as Partial<Record<DesignSide,PrintArea>>;
-            setHistory([{layers:design.layers.map(layer=>repositionLayer(layer,getPrintArea(layer.side,layer.printArea),areas[layer.side]!)),printAreas:areas,printSizes:design.printSizes??{}}]);setCursor(0);setAdditionalComments(design.additionalComments??"");
+            setHistory([{layers:design.layers.map(layer=>repositionLayer(layer,getPrintArea(layer.side,layer.printArea),areas[layer.side]!)),printAreas:areas,printSizes:design.printSizes??{}}]);setCursor(0);setAdditionalComments(design.additionalComments??"");setGarmentProof(design.garmentProof);
             setQuantities(Object.fromEntries(Object.entries(design.quantities).filter(([size]) => savedProduct.sizes.includes(size))));
             setMessage("Saved design opened. Your original saved copy is unchanged.");
           } else {
@@ -238,7 +264,7 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
     } catch (failure) { setError(failure instanceof Error ? failure.message : "That file could not be opened. Try a PNG or JPEG image."); }
   }
   function snapshot(id: string): SavedDesign {
-    return { version: 3, id, productId, colour, layers, additionalComments, printTemplate:template,
+    return { version: 3, id, productId, colour, layers, additionalComments, ...(currentGarmentProof ? { garmentProof: currentGarmentProof } : {}), printTemplate:template,
       printAreas:Object.fromEntries(availableSides.map(view=>[view,printAreaForSize(view,printSizes[view]??"large",printAreas[view],template)])),
       printSizes:{...printSizes},quantities, updatedAt: new Date().toISOString() };
   }
@@ -275,7 +301,7 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
       setProductId(savedProduct.id); setColour(savedProduct.colours.includes(design.colour) ? design.colour : savedProduct.colours[0]);
       setSide("front");
       const areas=Object.fromEntries(designSides.map(view=>[view,printAreaForSize(view,design.printSizes?.[view]??"large",design.printAreas?.[view],printTemplateForProduct(savedProduct))])) as Partial<Record<DesignSide,PrintArea>>;
-      setHistory([{layers:design.layers.map(layer=>repositionLayer(layer,getPrintArea(layer.side,layer.printArea),areas[layer.side]!)),printAreas:areas,printSizes:design.printSizes??{}}]); setCursor(0); setStep(0); setSelectedId(null); setGroupIds([]); setDraftId(null); setAdjustingArea(false);
+      setHistory([{layers:design.layers.map(layer=>repositionLayer(layer,getPrintArea(layer.side,layer.printArea),areas[layer.side]!)),printAreas:areas,printSizes:design.printSizes??{}}]); setCursor(0); setGarmentProof(design.garmentProof); setStep(0); setSelectedId(null); setGroupIds([]); setDraftId(null); setAdjustingArea(false);
       setQuantities(Object.fromEntries(Object.entries(design.quantities).filter(([size]) => savedProduct.sizes.includes(size))));
       setApproved(false); setError(""); setMessage("Design file opened. You can continue editing.");
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Could not open this design file."); }
@@ -338,9 +364,15 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
   }
   if (!product) return <p className="mt-8 rounded-xl bg-gray-50 p-6">No customizable apparel is available yet. <Link href="/product" className="underline">Shop ready-made products</Link></p>;
 
+  const commentsField = <div className="mt-6 border-t border-gray-100 pt-5">
+    <label htmlFor="design-comments" className="mt-5 block font-medium">Additional comments (optional)</label>
+    <textarea id="design-comments" maxLength={255} rows={3} value={additionalComments} onChange={event => { setAdditionalComments(event.target.value); setApproved(false); }} className="mt-2 w-full rounded-lg border border-gray-300 p-3 font-normal" />
+    <p className="mt-1 text-xs text-gray-500">Up to 255 characters. Included with this design in your order.</p>
+  </div>;
+
   return (
-    <div ref={studioRef} className="mt-7 min-w-0 scroll-mt-4">
-      <ol aria-label="Design steps" className="mb-6 grid grid-cols-3 overflow-hidden rounded-xl border border-gray-200 bg-white text-sm">
+    <div ref={studioRef} className="apparel-studio mt-5 min-w-0 scroll-mt-4 sm:mt-7">
+      <ol aria-label="Design steps" className="sticky top-0 z-30 mb-4 grid grid-cols-3 lg:static lg:z-auto lg:mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white text-sm">
         {["Design", "Sizes & quantities", "Review"].map((label, index) => <li key={label}>
           <button type="button" disabled={restoring || (index > 0 && !validDesign) || (index > 1 && (!totalQuantity || totalQuantity > available))}
             onClick={() => navigateStep(index)} aria-current={step === index ? "step" : undefined}
@@ -349,13 +381,19 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
           </button>
         </li>)}
       </ol>
+      {step !== 2 && currentGarmentProof && <button type="button" className="mb-4 text-xs underline" onClick={() => { setGarmentProof(undefined); setGarmentProofError(""); setApproved(false); }}>Refresh garment views</button>}
+      {!currentGarmentProof && <div className="mb-4 rounded border border-gray-200 p-3 text-sm">
+        {garmentProofError ? <><p role="alert">{garmentProofError}</p><button type="button" className="mt-2 underline" onClick={() => { setGarmentProofError(""); setApproved(false); setProofRetry(value => value + 1); }}>Retry garment previews</button></> : <p role="status">Preparing matching garment previews...</p>}
+        <p className="mt-1 text-xs text-gray-500">You can keep designing. All garment views must be ready before adding to cart.</p>
+      </div>}
       {restoring && <p role="status" className="mb-4 text-sm">Opening the design studio...</p>}
       <div ref={statusRef} tabIndex={-1} className="outline-none">
         {error && <DismissibleNotice tone="error" className="mb-4" onDismiss={() => setError("")}>{error}</DismissibleNotice>}
         {message && <DismissibleNotice tone="success" className="mb-4" onDismiss={() => setMessage("")}>{message}{message.includes("added to the cart") && <Link href="/cart" className="ml-2 font-medium underline">View cart</Link>}</DismissibleNotice>}
       </div>
-      <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)_260px]">
-        <section aria-label="Design tools" className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
+      <div className={`grid min-w-0 items-start gap-6 ${step === 2 ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-[280px_minmax(0,1fr)_260px]"}`}>
+        {step === 2 && <DesignProof approvalEmailsReady={approvalEmailsReady} design={snapshot(draftId ?? "unsaved-design")} lines={Object.entries(quantities).filter(([, count]) => count > 0).map(([size, quantity]) => ({ name: product.name, size, quantity }))} />}
+        {step !== 2 && <section aria-label="Design tools" className="order-2 min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-5 lg:order-none lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
           <div className="flex items-center justify-between gap-3"><span className="text-sm font-medium">Selected product</span>
             <Link href={catalogHref} className="text-sm underline" onClick={event=>{
               if(hasDraft&&!window.confirm("Save or export your design before changing products. Leave this design?"))event.preventDefault();
@@ -373,6 +411,7 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
             <div className={`mt-3 grid gap-2 ${(sleeve||headwear)?"grid-cols-1":"grid-cols-2"}`}>{((sleeve||headwear)?["pocket"] as const:["pocket","large"] as const).map(size=><button key={size} type="button" aria-pressed={(printSizes[side]??"large")===size}
               onClick={()=>choosePrintSize(size)} className={`rounded-lg border px-3 py-3 text-sm ${(printSizes[side]??"large")===size?"border-brand-link bg-brand/10":"border-gray-300"}`}>
               {(sleeve||headwear)?"Small · CA$2.50":size==="pocket"?"Pocket · CA$2.50":"Large · CA$5.00"}</button>)}</div>
+            <p className="mt-3 text-sm">Print area: {(area.width * displayScale.width).toFixed(2)} x {(area.height * displayScale.height).toFixed(2)} {printInches ? measurementUnit : "preview units"}{printInches ? " (estimated)" : ""}</p>
             <p className="mt-3 text-xs leading-5 text-gray-500">Choose a size, move its box on this view, then add your artwork. One print area per view. Only views with artwork are charged.</p>
           </fieldset>}
           {step === 0 && <fieldset disabled={restoring || saving} className="mt-6 border-t border-gray-100 pt-5">
@@ -404,22 +443,16 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
             {Object.entries(quantities).some(([size, count]) => count > remainingStock(items, product, size)) &&
               <p role="alert" className="mt-4 text-sm text-red-700">Reduce quantities to the available stock for each size.</p>}
           </div>}
-          {step === 2 && <div className="mt-6 border-t border-gray-100 pt-5 text-sm">
-            <h2 className="font-medium">Your selection</h2><p className="mt-3">{colour}</p>
-            <label htmlFor="design-comments" className="mt-5 block font-medium">Additional comments (optional)</label>
-            <textarea id="design-comments" maxLength={255} rows={3} value={additionalComments} onChange={event => setAdditionalComments(event.target.value)} className="mt-2 w-full rounded-lg border border-gray-300 p-3 font-normal" />
-            <p className="mt-1 text-xs text-gray-500">Up to 255 characters. Included with this design in your order.</p>
-            {Object.entries(quantities).filter(([, value]) => value > 0).map(([size, value]) => <p key={size} className="mt-2">{size} × {value}</p>)}
-            {sides.map(view=><p key={view} className="mt-3">{sideLabels[view]}: {headwear||view==="left"||view==="right"?"Small":(printSizes[view]??"large")==="pocket"?"Pocket":"Large"} print</p>)}
-          </div>}
-        </section>
+          {commentsField}
+        </section>}
 
-        <section aria-label="Design preview" className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-[#f4f4f2] lg:sticky lg:top-4">
+
+        {step !== 2 && <section aria-label="Design preview" className="order-1 min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-[#f4f4f2] lg:order-none lg:sticky lg:top-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3">
             <div className="grid w-full grid-cols-4 gap-2" role="group" aria-label="Garment side">
               {availableSides.map((value) => <button key={value} type="button" aria-label={sideLabels[value]} aria-pressed={side === value}
                 onClick={() => { setSide(value); setSelectedId(null); setGroupIds([]); setAdjustingArea(false); }} className={`flex min-w-0 flex-col items-center rounded-lg border px-1 py-2 text-xs ${side === value ? "border-gray-950 bg-gray-50 font-semibold" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
-                {product.viewImages[value] ? <svg viewBox="0 0 60 60" className="mb-1 h-12 w-12" aria-hidden="true"><image href={product.viewImages[value]} width="60" height="60" preserveAspectRatio="xMidYMid meet" /></svg>
+                {previewPhotos[value] ? <svg viewBox="0 0 60 60" className="mb-1 h-12 w-12" aria-hidden="true"><image href={previewPhotos[value]} width="60" height="60" preserveAspectRatio="xMidYMid meet" /></svg>
                   : <span className="mb-1 flex h-12 w-12 items-center justify-center rounded bg-gray-100 text-center text-[9px] leading-3 text-gray-500">Photo<br />needed</span>}
                 {sideLabels[value]}
               </button>)}
@@ -436,9 +469,9 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
             <span className="text-gray-500">{adjustingArea ? "Drag the blue box to the correct place on the garment." : "Adjust where artwork can be placed on this view."}</span>
           </div>}
           {step === 0 && selectionBox && <div className="flex flex-wrap items-center justify-center gap-3 border-b border-gray-200 bg-blue-50 px-4 py-3 text-xs" role="group" aria-label="Quick design size">
-            <span className="font-medium">Design size</span>
+            <span className="font-medium">Design size {printInches ? "(estimated)" : "(preview units)"}</span>
             <button type="button" className="rounded border border-blue-200 bg-white px-3 py-2 font-medium" onClick={() => commit(resizeSelection(layers, selectedIds, .85))}>− Smaller</button>
-            <span className="tabular-nums">{Math.round(selectionBox.right - selectionBox.left)} × {Math.round(selectionBox.bottom - selectionBox.top)}</span>
+            <span className="tabular-nums">{((selectionBox.right - selectionBox.left) * displayScale.width).toFixed(2)} &times; {((selectionBox.bottom - selectionBox.top) * displayScale.height).toFixed(2)} {printInches ? measurementUnit : "preview units"}</span>
             <button type="button" className="rounded border border-blue-200 bg-white px-3 py-2 font-medium" onClick={() => commit(resizeSelection(layers, selectedIds, 1.15))}>+ Larger</button>
             {selected && <span className="text-blue-800">Or drag a blue corner</span>}
             <button type="button" onClick={removeSelection} className="rounded border border-red-200 bg-white px-3 py-2 font-medium text-red-700 hover:bg-red-50">Delete selected</button>
@@ -457,22 +490,31 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
           <div ref={previewRef} className="mx-auto max-w-[500px] px-3"
             onPointerDownCapture={() => { if (step === 0) dragStart.current = history[cursor]; }}
             onPointerUp={finishDrag} onPointerCancel={finishDrag}>
-            <GarmentPreview layers={layers} side={side} photoUrl={product.viewImages[side]} productName={product.name}
+            <GarmentPreview layers={layers} side={side} photoUrl={previewPhotos[side]} productName={product.name}
               area={area} selectedId={selectedId} selectedIds={groupIds} zoom={zoom} guides={step === 0 && showGuides}
               onAreaMove={step === 0 && adjustingArea ? moveArea : undefined}
               onSelect={step === 0 && !adjustingArea ? (id) => { if (!groupIds.includes(id)) selectLayer(id); } : undefined} onMove={step === 0 && !adjustingArea ? moveLayer : undefined} onResize={step === 0 && !adjustingArea ? resizeDesign : undefined} />
           </div>
-          <p className="px-5 pb-5 text-center text-xs leading-5 text-gray-500">{product.viewImages[side]
+          <p className="px-5 pb-5 text-center text-xs leading-5 text-gray-500">{previewPhotos[side]
             ? "Selected garment photo. Print placement is approximate; final print dimensions need confirmation."
             : `${sideLabels[side]} photo has not been added for this garment. This view shows your artwork placement only.`}</p>
-        </section>
+        </section>}
 
-        <aside aria-label="Design details" className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
+        <aside aria-label="Design details" className="order-3 min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-5 lg:order-none lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
           {step===0&&<div className="mb-6 rounded-lg bg-gray-50 p-4 text-sm" aria-label="Current custom price">
             <p className="font-semibold">{price?`CA$${price.unit.toFixed(2)} per item`:pricing?`Base CA$${(pricing.baseCents/100).toFixed(2)} + printing`:"Base price awaiting confirmation"}</p>
             <p className="mt-2 text-xs leading-5 text-gray-600">Pocket/small CA$2.50 each · Large CA$5.00 each. Sleeves: small only. Shipping and taxes are additional.</p>
           </div>}
-          {step === 0 && selected ? <LayerEditor key={selected.id} layer={selected} availableSides={availableSides} onChange={(patch) => updateLayer(selected.id, patch)} onRemove={removeSelection} onDuplicate={duplicateSelection} onOrder={orderSelection} />
+          {step !== 2 && <>
+          <DesignApprovalNotice emailReady={approvalEmailsReady} />
+          {printInches ? <div className="mb-4">
+            <label className="block text-sm">Measurement unit<select aria-label="Measurement unit" value={measurementUnit} onChange={event => setMeasurementUnit(event.target.value as MeasurementUnit)} className={control}>
+              <option value="in">Inches</option><option value="cm">Centimetres</option>
+            </select></label>
+            <p className="mt-2 text-xs text-gray-500">Standard print area: {(printInches.width * (measurementUnit === "cm" ? 2.54 : 1)).toFixed(2)} x {(printInches.height * (measurementUnit === "cm" ? 2.54 : 1)).toFixed(2)} {measurementUnit}. Measurements are approximate. Final print size and placement may vary depending on the garment’s size and style.</p>
+          </div> : <p className="mb-4 text-xs text-gray-500">Hat and beanie sizing uses preview units until print measurements are confirmed.</p>}
+          </>}
+          {step === 0 && selected ? <LayerEditor unit={measurementUnit} printInches={standardPrintInches(selected.side, printSizes[selected.side] ?? "large", template)} key={selected.id} layer={selected} availableSides={availableSides} onChange={(patch) => updateLayer(selected.id, patch)} onRemove={removeSelection} onDuplicate={duplicateSelection} onOrder={orderSelection} />
             : step === 0 && groupIds.length ? <div className="space-y-3">
               <h2 className="font-medium">{groupIds.filter((id) => layers.some((layer) => layer.id === id)).length} elements selected</h2>
               <p className="text-xs leading-5 text-gray-500">Drag the selection together, or use these actions.</p>
@@ -492,21 +534,24 @@ export default function DesignStudio({ products,initialProductId,catalogHref="/c
             {!pricing && <DismissibleNotice className="mt-4 leading-6">The base price for this garment is awaiting confirmation. You can save or download your design.</DismissibleNotice>}
             <p className="mt-4 text-xs leading-5 text-gray-500">Shipping and taxes are not included.</p>
           </div>}
+          {step === 2 && commentsField}
           <div className="mt-6 space-y-3 border-t border-gray-100 pt-5">
             {step === 0 && <button type="button" className={`${primary} w-full`} disabled={!layers.length || restoring || saving || layers.some((layer) => layer.kind === "text" && !layer.text?.trim())}
               onClick={() => navigateStep(1)}>Continue to sizes</button>}
             {step === 1 && <button type="button" className={`${primary} w-full`} disabled={!totalQuantity || totalQuantity > available || saving}
               onClick={() => navigateStep(2)}>Review design</button>}
             {step === 2 && <>
-              <label className="flex items-start gap-2 text-sm leading-6"><input type="checkbox" checked={approved} onChange={(event) => setApproved(event.target.checked)} className="mt-1.5 accent-black" />I have reviewed the spelling, artwork, and placement, and have permission to use this design.</label>
+              <label className="flex items-start gap-2 text-sm leading-6"><input type="checkbox" disabled={!currentGarmentProof || restoring || saving} checked={approved} onChange={(event) => setApproved(event.target.checked)} className="mt-1.5 accent-black" />I have reviewed the spelling, artwork, and placement, and have permission to use this design.</label>
               <button type="button" className={`${primary} w-full`} disabled={!canOrder || !approved || saving} onClick={addToCart}>{saving ? "Saving..." : "Add custom apparel to cart"}</button>
             </>}
+            {step !== 2 && <>
             <button type="button" className={`${button} w-full`} onClick={save} disabled={!hasDraft || saving || restoring}>{saving ? "Saving..." : "Save design"}</button>
             <button type="button" className="w-full py-1 text-xs underline disabled:opacity-40" onClick={download} disabled={!hasDraft}>Download editable design</button>
             <button type="button" className="w-full py-1 text-xs underline disabled:opacity-40" onClick={downloadPreview} disabled={!layers.length}>Download {side} preview</button>
             <button type="button" className="w-full py-1 text-xs underline" onClick={() => designInput.current?.click()} disabled={restoring || saving}>Open a design file</button>
             <input ref={designInput} type="file" accept="application/json,.json" aria-label="Open saved design file" onChange={openDesign} className="sr-only" tabIndex={-1} />
             <p className="text-xs leading-5 text-gray-500">Saved designs stay in this browser on this device. Download a copy to keep it elsewhere.</p>
+            </>}
           </div>
         </aside>
       </div>

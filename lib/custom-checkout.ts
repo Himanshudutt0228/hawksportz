@@ -13,6 +13,14 @@ export function checkoutDesign(value: unknown, product: Record<string, unknown>)
   const original = value as SavedDesign;
   if (design.layers.some((layer, index) => ["x", "y", "width", "height", "rotation"].some(key =>
     Math.abs(layer[key as "x"] - original.layers[index][key as "x"]) > 0.000001))) return null;
-  const quote = quotePrintAreas(customPricingForCategory(String(product.category),Number(product.price)), printedSides(design.layers), design.printSizes ?? {}, 1);
-  return quote ? design : null;
+  // The editor can omit untouched defaults. SQL requires an explicit size for
+  // every printed side; use the same defaults as the editor and pricing helper.
+  const sides = printedSides(design.layers);
+  const printSizes = { ...design.printSizes };
+  for (const side of sides) {
+    printSizes[side] = side === "left" || side === "right" || design.printTemplate === "headwear"
+      ? "pocket" : printSizes[side] ?? "large";
+  }
+  const quote = quotePrintAreas(customPricingForCategory(String(product.category),Number(product.price)), sides, printSizes, 1);
+  return quote ? { ...design, printSizes } : null;
 }

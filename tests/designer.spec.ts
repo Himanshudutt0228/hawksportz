@@ -43,7 +43,7 @@ test("design apparel with text, both sides, quantities and a saved draft", async
   await page.getByRole("spinbutton", { name: "Quantity for size M", exact: true }).fill("2");
   await page.getByRole("button", { name: "Review design", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Price summary", exact: true })).toBeVisible();
-  await expect(page.getByText("M × 2", { exact: true })).toBeVisible();
+  await expect(page.getByText("M: 2", { exact: true })).toBeVisible();
   if (await page.getByText("Custom printing prices are not available yet.", { exact: false }).count()) {
     await expect(page.getByRole("button", { name: "Add custom apparel to cart", exact: true })).toBeDisabled();
   }

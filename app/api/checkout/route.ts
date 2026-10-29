@@ -1,3 +1,5 @@
+import { checkoutReservationFailure } from "@/lib/checkout-reservation-error";
+import { verifyGarmentProof } from "@/lib/garment-proof-signature";
 import { checkoutDesign } from "@/lib/custom-checkout";
 import { authSiteUrl, createAuthClient } from "@/lib/auth/server";
 import { checkoutStripe, guestOrderHash, orderDatabase, sandboxCheckoutReady, sandboxTaxMode } from "@/lib/checkout-server";
@@ -34,13 +36,16 @@ export async function POST(request: Request) {
         const product = products.find(product => String(product.id) === line.id);
         const source = designs.find(value => value && typeof value === "object" && "id" in value && value.id === line.customization!.designId);
         const design = product && checkoutDesign(source, product);
-        if (!design) return Response.json({ error: "Reopen your custom design, check its product and print options, and save it again before checkout." }, { status: 400, headers });
+        if (!design || !verifyGarmentProof(design.garmentProof, design.productId, process.env.SUPABASE_SECRET_KEY ?? "")) return Response.json({ error: "Reopen your custom design, refresh garment views, check the print options, and save it again before checkout." }, { status: 400, headers });
         snapshots[design.id] = design;
       }
     }
     const { data: order, error } = await db.rpc(customLines.length ? "store_custom_checkout_start" : "store_checkout_start", { p_order_id: checkout.requestId,
       p_access_hash: accessHash, p_user_id: userId, p_lines: checkout.lines, p_method: checkout.method, ...(customLines.length ? { p_designs: snapshots } : {}) });
-    if (error || !order) return Response.json({ error: "Unable to reserve this cart. Refresh the cart to check current sizes, stock, and prices, then try again." }, { status: 409, headers });
+    if (error || !order) {
+      const failure = checkoutReservationFailure(error);
+      return Response.json({ error: failure.error }, { status: failure.status, headers });
+    }
     const stripe = checkoutStripe();
     const taxMode = sandboxTaxMode();
     if (order.stripe_session_id) {

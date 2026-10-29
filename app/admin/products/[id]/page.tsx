@@ -23,7 +23,7 @@ export default async function EditProductPage({ params, searchParams }: {
   const { data: product, error } = await supabase.from("products")
     .select("*").eq("id", id).maybeSingle();
   if (!error && !product) notFound();
-  return <main className="mx-auto w-full max-w-2xl px-5 py-12">
+  return <main className="mobile-content mx-auto w-full max-w-2xl px-5 py-12">
     <Link href="/admin" className="text-sm underline">Back to products</Link>
     <h1 className="mt-6 text-3xl font-semibold">Edit product</h1>
     {created === "1" && product && <DismissibleNotice tone="success" className="mt-4">Product created.</DismissibleNotice>}

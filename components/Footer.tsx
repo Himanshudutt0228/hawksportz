@@ -13,7 +13,7 @@ export default function Footer() {
       </div>
       <nav
         aria-label="Footer navigation"
-        className="store-container mt-8 flex flex-wrap items-center justify-start gap-x-8 gap-y-4 border-t border-white/15 py-6 text-sm text-zinc-300"
+        className="store-container mt-8 flex flex-nowrap items-center justify-start gap-x-4 whitespace-nowrap border-t border-white/15 py-6 text-xs text-zinc-300 sm:gap-x-8 sm:text-sm"
       >
         <Link href="/about" className="hover:underline focus-visible:underline">
           About

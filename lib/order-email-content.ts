@@ -3,7 +3,7 @@ import { pickupLocation, pickupInstructions } from "./checkout";
 import { storeContactEmail } from "./store-contact";
 
 export type EmailSnapshot = {
-  id: string; kind: "payment_confirmed" | "ready_for_pickup" | "shipped";
+  id: string; kind: "payment_confirmed" | "ready_for_pickup" | "shipped" | "design_approved";
   email: string; method: "pickup" | "shipping";
   items: { name: string; size: string | null; quantity: number; unit_cents: number }[];
   subtotal: number; shipping: number; tax: number; total: number;
@@ -12,6 +12,7 @@ export type EmailSnapshot = {
 export function orderEmailContent(order: EmailSnapshot) {
   const headings = {
     payment_confirmed: "Payment confirmed",
+    design_approved: "Your custom design has been approved",
     ready_for_pickup: "Your order is ready for pickup",
     shipped: "Your order has shipped",
   };
@@ -26,6 +27,9 @@ export function orderEmailContent(order: EmailSnapshot) {
       "", `Items: ${orderMoney(order.subtotal)}`, `Shipping: ${orderMoney(order.shipping)}`,
       `Tax: ${orderMoney(order.tax)}`, `Total: ${orderMoney(order.total)}`, "");
     lines.push(order.method === "pickup" ? "Please wait for a ready-for-pickup email before arranging collection." : "We will email you when your order ships.");
+  }
+  if (order.kind === "design_approved") {
+    lines.push("The owner has reviewed and approved the custom designs in this test order.", "This sandbox approval does not authorize production or fulfilment.");
   }
   if (order.kind === "ready_for_pickup") {
     lines.push(`${pickupLocation.line1}, ${pickupLocation.city}, ${pickupLocation.state} ${pickupLocation.postal_code}`, pickupInstructions,

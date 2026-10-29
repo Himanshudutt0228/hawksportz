@@ -13,7 +13,7 @@ const categories = [
   { slot:"design-your-own",href:"/custom-apparel",name:"Design Your Own",description:"Make your apparel yours" },
 ] as const;
 
-export default async function ShopCategories() {
+export default async function ShopCategories({ showArrows = true }: { showArrows?: boolean } = {}) {
   const images = await loadSiteImages();
   return <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
     {categories.map(({ slot,href,name,description }) => <Link key={slot} href={href} aria-label={name} className="group min-w-0">
@@ -21,7 +21,7 @@ export default async function ShopCategories() {
         {images[slot] ? <Image src={images[slot].url} alt={images[slot].alt} fill sizes="(max-width:1024px) 50vw, 25vw" className="object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none" />
           : <span aria-hidden="true" className="px-4 text-center text-2xl font-semibold tracking-tight text-stone-400 sm:text-4xl">{name}</span>}
       </div>
-      <div className="mt-4 flex items-center justify-between gap-2"><h3 className="text-base font-semibold sm:text-xl">{name}</h3><span aria-hidden="true" className="text-lg">↗</span></div>
+      <div className="mt-4 flex items-center justify-between gap-2"><h3 className="text-base font-semibold sm:text-xl">{name}</h3>{showArrows && <span aria-hidden="true" className="text-lg">↗</span>}</div>
       <p className="mt-1 text-xs text-gray-500 sm:text-sm">{description}</p>
     </Link>)}
   </div>;

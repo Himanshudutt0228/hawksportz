@@ -20,7 +20,7 @@ export default function AuthForm({ mode }: { mode: keyof typeof settings }) {
   const fieldClass = "mt-2 w-full rounded-lg border border-gray-300 px-3 py-3 focus:outline-2 focus:outline-offset-2 focus:outline-gray-900";
 
   return (
-    <section className="mx-auto w-full max-w-md rounded-xl border border-gray-200 p-6 sm:p-8">
+    <section className="mx-auto w-full max-w-md rounded-xl border border-gray-200 p-5 sm:p-8">
       <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
       <p className="mt-3 text-gray-600">{description}</p>
       <form action={formAction} className="mt-6 space-y-5">
@@ -47,10 +47,10 @@ export default function AuthForm({ mode }: { mode: keyof typeof settings }) {
         {state.error && <DismissibleNotice tone="error" resetKey={state}>{state.error}</DismissibleNotice>}
         {state.message && <DismissibleNotice tone="success" resetKey={state}>{state.message}</DismissibleNotice>}
       </form>
-      <nav aria-label="Account help" className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm underline">
-        {mode !== "sign-in" && <Link href="/sign-in">Sign in</Link>}
-        {mode !== "sign-up" && <Link href="/sign-up">Create an account</Link>}
-        {mode === "sign-in" && <Link href="/forgot-password">Forgot password?</Link>}
+      <nav aria-label="Account help" className="mt-6 flex flex-wrap gap-3 text-sm">
+        {mode !== "sign-in" && <Link href="/sign-in" className="nav-button">Sign in</Link>}
+        {mode !== "sign-up" && <Link href="/sign-up" className="nav-button">Create an account</Link>}
+        {mode === "sign-in" && <Link href="/forgot-password" className="nav-button">Forgot password?</Link>}
       </nav>
     </section>
   );

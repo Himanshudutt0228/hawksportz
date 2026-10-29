@@ -80,7 +80,7 @@ export default function CartPage() {
   }
   const subtotalCents = items.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
   return (
-    <main className="store-container py-12">
+    <main className="mobile-content store-container py-12">
       <h1 className="text-4xl font-bold">Your cart</h1>
       {actionError && <DismissibleNotice tone="error" onDismiss={() => setActionError("")}>{actionError}</DismissibleNotice>}
       {messages.length > 0 && <section aria-label="Cart updates" className="mt-6">

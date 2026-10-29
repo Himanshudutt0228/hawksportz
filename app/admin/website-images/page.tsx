@@ -13,7 +13,7 @@ export default async function WebsiteImagesPage() {
   const missingLabels=missingSlots.map(slot=>siteImageSlots[slot].label);
   const missingAudienceSlots=missingSlots.some(slot=>slot.startsWith("audience-"));
   const missingShopSlots=missingSlots.some(slot=>["hats","beanies","sweatshirts","design-your-own"].includes(slot));
-  return <main className="mx-auto w-full max-w-6xl px-5 py-12">
+  return <main className="mobile-content mx-auto w-full max-w-6xl px-5 py-12">
     <Link href="/admin" className="text-sm underline">Back to Admin</Link>
     <h1 className="mt-6 text-3xl font-semibold">Website images</h1>
     <p className="mt-3 max-w-3xl leading-7 text-gray-600">Change homepage, collection and page images here. Use still PNG, JPEG or WebP files up to 5 MB and 16 megapixels. Changes appear on the website after saving.</p>

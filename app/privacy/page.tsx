@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPage() {
-  return <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
+  return <main className="mobile-content mx-auto w-full max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
     <h1 className="text-4xl font-semibold tracking-tight">Privacy notice</h1>
     <p className="mt-4 text-sm text-gray-500">Last updated: October 28, 2026</p>
     <p className="mt-5 leading-7 text-gray-600">This notice describes the current Hawk Sportz website. Checkout is currently in test mode. Information you enter during testing can still be stored and sent to our service providers.</p>

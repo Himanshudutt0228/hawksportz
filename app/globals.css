@@ -41,10 +41,27 @@ body {
   padding-inline: clamp(1.25rem, 3.2vw, 4rem);
 }
 
-nav[aria-label="Main navigation"] a:hover,
-nav[aria-label="Main navigation"] button:hover {
-  color: var(--color-brand-link);
+/* Navigation keeps link semantics, with consistent button-style targets. */
+.nav-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-gray-300);
+  border-radius: .5rem;
+  padding: .625rem .875rem;
+  background: white;
+  color: var(--color-ink);
+  text-decoration: none;
 }
+.nav-button:hover { border-color: var(--color-brand); background: var(--color-gray-50); color: var(--color-brand-link); }
+.nav-button[aria-expanded="true"] { border-color: var(--color-brand); background: var(--color-gray-50); }
+.nav-button-primary { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-on-brand); }
+.nav-button-primary:hover { background: var(--color-brand-dark); color: var(--color-on-brand); }
+.mobile-shop-nav .nav-button, .nav-subbutton { display: flex; width: 100%; justify-content: space-between; }
+.nav-subbutton { justify-content: flex-start; font-size: .875rem; }
+.nav-button:focus-visible, .header-action:focus-visible { outline: 2px solid var(--color-brand-link); outline-offset: 3px; }
+.header-action:hover { background: var(--color-brand); border-color: var(--color-brand); color: white; }
 
 footer a:hover,
 header a:hover {
@@ -72,4 +89,27 @@ input[type="radio"] {
   .product-belt { overflow-x: auto; }
   .product-belt-track { animation: none; transform: none; }
   .product-belt-repeat { display: none; }
+}
+
+@media print {
+  body > div header, body > div footer, body > header, body > footer { display: none !important; }
+}
+
+body:has(dialog[data-mobile-menu][open]) { overflow: hidden; }
+@media (max-width: 767px) {
+  .store-container { padding-inline: 1rem; }
+  header a:not(.header-action):hover { color: var(--color-brand-link); }
+  .mobile-shop-nav a, .mobile-shop-nav button { min-height: 44px; }
+  .apparel-studio button { min-height: 44px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea { font-size: 16px; }
+}
+
+@media (min-width: 768px) { .header-action:focus-visible { outline-color: var(--color-brand-on-dark); } }
+
+/* Content routes share phone gutters and safe wrapping; the homepage keeps its hero layout. */
+@media screen and (max-width: 767px) {
+  .mobile-content { min-width: 0; padding-top: 1.5rem; padding-bottom: 2rem; overflow-wrap: anywhere; }
+  .mobile-content > *, .mobile-content fieldset { min-width: 0; }
+  .mobile-content h1 { font-size: clamp(1.75rem, 7vw, 1.875rem); line-height: 1.15; }
+  .mobile-content input[type="file"], .mobile-content .nav-button { max-width: 100%; }
 }

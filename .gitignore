@@ -12,6 +12,7 @@
 !.yarn/versions
 
 # testing
+/.cache/
 /coverage
 /test-results/
 /playwright-report/

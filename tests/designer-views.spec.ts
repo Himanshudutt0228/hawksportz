@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("selected product photo, four view choices, corner resizing and quick sizing", async ({ page }, testInfo) => {
   await page.goto("/custom-apparel?resume=1");
   const preview = page.getByRole("region", { name: "Design preview", exact: true });
-  await expect(preview.locator("image[data-garment-photo]")).toHaveAttribute("href", /\/product-images\//);
+  await expect(preview.locator("image[data-garment-photo]")).toHaveAttribute("href", /^data:image\/webp;base64,/);
   await expect(preview.locator("image[data-garment-photo]")).toHaveCount(1);
   for (const name of ["Back", "Left sleeve", "Right sleeve"]) {
     await preview.getByRole("button", { name, exact: true }).click();
@@ -30,8 +30,8 @@ test("selected product photo, four view choices, corner resizing and quick sizin
   await preview.getByRole("group", { name: "Quick design size", exact: true }).getByRole("button", { name: /Smaller/ }).click();
   await expect.poll(async () => Number(await widthInput.inputValue())).toBeLessThan(originalWidth);
   await page.getByRole("button", { name: "Make design larger", exact: true }).click();
-  await widthInput.fill("100");
-  await expect(widthInput).toHaveValue("100");
+  await widthInput.fill("10.5");
+  await expect(widthInput).toHaveValue("10.5");
   await page.screenshot({ path: testInfo.outputPath("actual-product-and-resize.png"), fullPage: true });
 });
 
@@ -47,10 +47,10 @@ test("artwork height changes without changing width, and edge handles stretch th
   const width = page.getByRole("spinbutton", { name: "Design width", exact: true });
   const height = page.getByRole("spinbutton", { name: "Design height", exact: true });
   await expect(page.getByRole("checkbox", { name: "Lock proportions", exact: true })).not.toBeChecked();
-  await width.fill("100");
-  await height.fill("180");
-  await expect(width).toHaveValue("100");
-  await expect(height).toHaveValue("180");
+  await width.fill("5.79");
+  await height.fill("10.42");
+  await expect(width).toHaveValue("5.79");
+  await expect(height).toHaveValue("10.42");
   await expect(page.getByRole("button", { name: "Select artwork", exact: true }).locator("image")).toHaveAttribute("preserveAspectRatio", "none");
   const handle = page.getByRole("button", { name: "Resize design bottom edge", exact: true });
   await handle.scrollIntoViewIfNeeded();
@@ -59,11 +59,11 @@ test("artwork height changes without changing width, and edge handles stretch th
   await page.mouse.down();
   await page.mouse.move(position!.x + position!.width / 2, position!.y + position!.height / 2 + 20, { steps: 4 });
   await page.mouse.up();
-  await expect.poll(async () => Number(await height.inputValue())).toBeGreaterThan(180);
-  await expect(width).toHaveValue("100");
+  await expect.poll(async () => Number(await height.inputValue())).toBeGreaterThan(10.42);
+  await expect(width).toHaveValue("5.79");
   await page.getByRole("checkbox", { name: "Lock proportions", exact: true }).check();
   const previousWidth = Number(await width.inputValue());
-  await height.fill("100");
+  await height.fill("5.79");
   await expect.poll(async () => Number(await width.inputValue())).toBeLessThan(previousWidth);
 });
 
@@ -80,7 +80,7 @@ test("left and right designs stay on their sleeve and retain placement after reo
   await page.getByRole("combobox", { name: "Print side", exact: true }).selectOption("right");
   await expect(layer).toHaveAttribute("transform", /^translate\(97\.5 /);
   await expect(page.locator('rect[data-print-area="right"]')).toHaveAttribute("x", "65");
-  await expect(page.getByRole("spinbutton", { name: "Design width", exact: true })).toHaveAttribute("max", "65");
+  expect(Number(await page.getByRole("spinbutton", { name: "Design width", exact: true }).getAttribute("max"))).toBeCloseTo(65 * 11 / 190, 6);
   await page.getByRole("button", { name: "Save design", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Design saved on this device");
   await page.reload();

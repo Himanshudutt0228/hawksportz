@@ -1,3 +1,4 @@
+import { readGarmentProof, type GarmentProof } from "./garment-proof.ts";
 import {readPrintSizes,printAreaForSize,type PrintSizes,type PrintTemplate} from "./print-pricing.ts";
 export const designSides = ["front", "back", "left", "right"] as const;
 export type DesignSide = typeof designSides[number];
@@ -51,6 +52,7 @@ export type SavedDesign = {
   productId: string;
   colour: string;
   additionalComments?: string;
+  garmentProof?: GarmentProof;
   layers: DesignLayer[];
   quantities: Record<string, number>;
   updatedAt: string;
@@ -232,6 +234,8 @@ export function parseDesign(value: unknown): SavedDesign | null {
     || !Array.isArray(design.layers) || design.layers.length > 30
     || !design.quantities || typeof design.quantities !== "object" || Array.isArray(design.quantities)
     || typeof design.updatedAt !== "string") return null;
+  const garmentProof = design.garmentProof === undefined ? undefined : readGarmentProof(design.garmentProof);
+  if (design.garmentProof !== undefined && (!garmentProof || garmentProof.productId !== design.productId)) return null;
   const ids = new Set<string>();
   const template=design.printTemplate??"standard";
   if(!["standard","long-sleeve","headwear"].includes(template))return null;
@@ -277,6 +281,7 @@ export function parseDesign(value: unknown): SavedDesign | null {
     if (size.length > 100 || !Number.isSafeInteger(quantity) || quantity < 0 || quantity > 100000) return null;
   }
   return { version: design.version===3?3:2, id: design.id, productId: design.productId, colour: design.colour, ...(design.additionalComments ? { additionalComments: design.additionalComments } : {}),
+    ...(garmentProof ? { garmentProof } : {}),
     layers: design.layers.map((layer) => {
       const area = getPrintArea(layer.side, printAreas[layer.side]);
       const placed = { ...layer, printArea: area };

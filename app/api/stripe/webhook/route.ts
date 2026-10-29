@@ -11,7 +11,16 @@ export async function POST(request: Request) {
   if (!signature) return new Response("Invalid signature", { status: 400 });
   let event;
   try {
-    event = checkoutStripe().webhooks.constructEvent(await limitedBody(request, 262144), signature, secret);
+    const body = await limitedBody(request, 262144);
+    const stripe = checkoutStripe();
+    const nextSecret = process.env.STRIPE_WEBHOOK_SECRET_NEXT;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, secret);
+    } catch {
+      // Endpoint migration: verify the same raw body against the new endpoint secret.
+      if (!nextSecret?.startsWith("whsec_")) throw new Error("Invalid signature");
+      event = stripe.webhooks.constructEvent(body, signature, nextSecret);
+    }
   } catch { return new Response("Invalid webhook", { status: 400 }); }
   if (event.livemode) return new Response("Live events are disabled", { status: 400 });
   if (!["checkout.session.completed", "checkout.session.expired", "checkout.session.async_payment_succeeded"].includes(event.type)) return new Response("Ignored");

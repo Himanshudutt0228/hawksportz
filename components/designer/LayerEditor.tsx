@@ -4,15 +4,21 @@ import { useState } from "react";
 import { designFonts } from "@/lib/design-art";
 import { designSides, sideLabels, resizeLayer, resizeLayerDimension, getLayerPrintArea, type DesignLayer, type DesignSide } from "@/lib/design";
 
+import { measurementScale, type MeasurementUnit } from "@/lib/print-measurements";
+
 const control = "mt-1.5 block w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm";
 const button = "rounded-lg border border-gray-300 px-3 py-2 text-xs hover:bg-gray-50";
 
-export default function LayerEditor({ layer, onChange, onRemove, onDuplicate, onOrder, availableSides=designSides }: {
+export default function LayerEditor({ layer, onChange, onRemove, onDuplicate, onOrder, availableSides=designSides, unit="in", printInches=null }: {
+  unit?: MeasurementUnit;
+  printInches?: { width: number; height: number } | null;
   availableSides?:readonly DesignSide[];
   layer: DesignLayer; onChange: (patch: Partial<DesignLayer>) => void;
   onRemove: () => void; onDuplicate: () => void; onOrder: (direction: "front" | "back") => void;
 }) {
   const area = getLayerPrintArea(layer);
+  const scale = measurementScale( printInches, unit);
+  const unitLabel = printInches ? unit : "preview units";
   return <div className="space-y-4">
     <div className="flex items-center justify-between gap-3">
       <h2 className="font-medium">Edit {layer.kind === "text" ? "text" : layer.kind === "art" ? "graphic" : "artwork"}</h2>
@@ -25,10 +31,11 @@ export default function LayerEditor({ layer, onChange, onRemove, onDuplicate, on
         <button type="button" aria-label="Make design larger" className={button} onClick={() => onChange(resizeLayer(layer, 1.15))}>+ Larger</button>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <DimensionField label="Width" maximum={area.width} value={layer.width} onChange={(width) => onChange(resizeLayerDimension(layer, "width", width))} />
-        <DimensionField label="Height" maximum={area.height} value={layer.height} onChange={(height) => onChange(resizeLayerDimension(layer, "height", height))} />
+        <DimensionField key={`width-${unit}-${scale.width}`} scale={scale.width} unit={unitLabel} label="Width" maximum={area.width} value={layer.width} onChange={(width) => onChange(resizeLayerDimension(layer, "width", width))} />
+        <DimensionField key={`height-${unit}-${scale.height}`} scale={scale.height} unit={unitLabel} label="Height" maximum={area.height} value={layer.height} onChange={(height) => onChange(resizeLayerDimension(layer, "height", height))} />
       </div>
       <label className="mt-3 flex items-center gap-2 text-xs"><input type="checkbox" checked={!!layer.lockAspectRatio} onChange={(event) => onChange({ lockAspectRatio: event.target.checked })} className="accent-black" />Lock proportions</label>
+      <p className="mt-2 text-xs leading-5 text-gray-500">Measurements are approximate. Final print size and placement may vary depending on the garment’s size and style.</p>
       <p className="mt-2 text-xs leading-5 text-gray-500">Width and height change independently when unlocked. Drag a top or bottom handle to change height.</p>
     </div>
     {layer.kind === "text" && <>
@@ -50,9 +57,9 @@ export default function LayerEditor({ layer, onChange, onRemove, onDuplicate, on
       <label className="flex items-center justify-between gap-3 text-sm">Outline colour<input type="color" aria-label="Outline colour" value={layer.outlineColor ?? "#ffffff"} onChange={(event) => onChange({ outlineColor: event.target.value })} className="h-9 w-14 rounded border border-gray-200" /></label>
     </>}
     {layer.kind !== "image" && <label className="flex items-center justify-between gap-3 text-sm">{layer.kind === "text" ? "Text colour" : "Graphic colour"}<input type="color" aria-label={layer.kind === "text" ? "Text colour" : "Graphic colour"} value={layer.color ?? "#111111"} onChange={(event) => onChange({ color: event.target.value })} className="h-9 w-14 rounded border border-gray-200" /></label>}
-    <label className="block text-sm">Element width<input type="range" min={8} max={area.width} step={1} value={Math.round(layer.width)} className="mt-3 w-full accent-gray-950"
+    <label className="block text-sm">Element width: {(layer.width * scale.width).toFixed(2)} {unitLabel}<input aria-label="Element width" type="range" min={8} max={area.width} step={1} value={Math.round(layer.width)} className="mt-3 w-full accent-gray-950"
       onChange={(event) => onChange(resizeLayerDimension(layer, "width", Number(event.target.value)))} /></label>
-    <label className="block text-sm">Element height<input type="range" min={8} max={area.height} step={1} value={Math.round(layer.height)} className="mt-3 w-full accent-gray-950"
+    <label className="block text-sm">Element height: {(layer.height * scale.height).toFixed(2)} {unitLabel}<input aria-label="Element height" type="range" min={8} max={area.height} step={1} value={Math.round(layer.height)} className="mt-3 w-full accent-gray-950"
       onChange={(event) => onChange(resizeLayerDimension(layer, "height", Number(event.target.value)))} /></label>
     <label className="block text-sm">Rotation: {Math.round(layer.rotation)}°<input type="range" aria-label="Element rotation" min={-180} max={180} value={layer.rotation} className="mt-3 w-full accent-gray-950" onChange={(event) => onChange({ rotation: Number(event.target.value) })} /></label>
     <label className="block text-sm">Opacity: {Math.round((layer.opacity ?? 1) * 100)}%<input type="range" aria-label="Element opacity" min={.1} max={1} step={.05} value={layer.opacity ?? 1} className="mt-2 w-full accent-gray-950" onChange={(event) => onChange({ opacity: Number(event.target.value) })} /></label>
@@ -68,16 +75,16 @@ export default function LayerEditor({ layer, onChange, onRemove, onDuplicate, on
   </div>;
 }
 
-function DimensionField({ label, value, maximum, onChange }: {
-  label: string; value: number; maximum: number; onChange: (value: number) => void;
+function DimensionField({ label, value, maximum, onChange, scale, unit }: {
+  label: string; value: number; maximum: number; onChange: (value: number) => void; scale: number; unit: string;
 }) {
   const [draft, setDraft] = useState<{ source: number; text: string | null }>({ source: value, text: null });
   if (draft.source !== value) setDraft({ source: value, text: null });
-  return <label className="text-xs">{label}<input type="number" aria-label={`Design ${label.toLowerCase()}`} min={8} max={maximum} step={1}
-    value={draft.text ?? Math.round(value)} className={control}
+  return <label className="text-xs">{label} ({unit})<input type="number" aria-label={`Design ${label.toLowerCase()}`} min={Number((8 * scale).toFixed(4))} max={maximum * scale} step="any"
+    value={draft.text ?? Number((value * scale).toFixed(2))} className={control}
     onChange={(event) => {
       setDraft({ source: value, text: event.target.value });
-      const number = Number(event.target.value);
+      const number = Number(event.target.value) / scale;
       if (Number.isFinite(number) && number >= 8 && number <= maximum) onChange(number);
     }}
     onBlur={() => setDraft({ source: value, text: null })} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />

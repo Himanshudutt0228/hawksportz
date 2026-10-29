@@ -27,3 +27,11 @@ This is not the final payment authority for custom orders. Artwork is still brow
 ## Checks
 
 Examples: T-shirt Pocket $15; Large $17.50; Pocket+Large $20; two Large $22.50; two Large plus two Pocket sleeve areas $27.50. Hoodie Pocket $30; Large $32.50. Multiple text/image elements in one area do not multiply the fee. Save/reload and review must preserve both sizes and totals; changing local cart price must be corrected by refresh.
+
+## Standard measurement estimates (2026-10-29)
+
+The customizer now defaults to inches with a centimetre selector (1 inch = 2.54 cm). User-approved adult estimates: Pocket 4x4 in, Large 11x11 in, short sleeve 3.5x3.5 in, long sleeve 2x11.5 in. Width/height entry and selection readouts map existing preview coordinates proportionally along each axis; saved coordinates and pricing are unchanged. These are sizing estimates, not calibrated production templates or guaranteed garment fit. Headwear still uses preview units pending confirmed panel measurements. This supersedes earlier notes that all displayed dimensions are canvas units.
+
+Measurement correction (2026-10-29): the earlier independent-axis conversion incorrectly labelled rectangular boxes as square physical areas. The current implementation preserves existing preview geometry, anchors the estimated width (Large 11 in, Pocket 4 in, short sleeve 3.5 in, long sleeve 2 in), and derives height from the box aspect ratio with one scale for both axes. Thus Large is approximately 11x14.47 in, Pocket 4x4 in, short sleeve 3.5x3.77 in, long sleeve 2x6.15 in. These replace the earlier square/long-sleeve height estimates; they remain uncalibrated estimates, not confirmed equipment limits. Headwear remains in preview units. No saved artwork geometry or prices changed.
+
+Shared-scale correction (2026-10-29): supersedes all earlier per-preset width anchors. Every non-headwear box/view now uses 11/190 inches per preview unit, anchored only to Large width. Derived estimates: Large 11x14.47 in, Pocket 4.05x4.05 in, short sleeve 3.76x4.05 in, long sleeve 3.76x11.58 in. Long sleeve now measures 80% of Large height, matching 200/250 preview units. This does not resize saved geometry or alter prices; existing proofs use the corrected estimate. Headwear still shows preview units. Product photos and real production limits remain uncalibrated.

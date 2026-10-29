@@ -32,3 +32,13 @@ Resend retains idempotency keys for 24 hours: automatic retries stop after 23 ho
 Disable dispatch with `ORDER_EMAILS_ENABLED=false`. The queue still records future transitions while disabled; enabling later dispatches queued notifications. Review old pending messages before enabling after a long outage. No production sending or hosting scheduler is claimed ready.
 
 References: [Resend send API](https://resend.com/docs/api-reference/emails/send-email), [idempotency and 24-hour retention](https://resend.com/docs/dashboard/emails/idempotency-keys).
+
+Canonical production domain and migration checklist: [DOMAIN_MIGRATION.md](DOMAIN_MIGRATION.md).
+
+## Custom design approval
+
+Apply `supabase/design-approval.sql` after order-emails.sql, custom-checkout.sql and production-review.sql. This adds a separate owner approval timestamp/actor and `design_approved` notification kind. No old checked designs are automatically approved or emailed. The migration is transactional and safe to rerun; it does not change stock, payment state, fulfilment permissions or existing email jobs.
+
+For a paid custom order: inspect the production sheet, resolve questions with the customer, Mark design checked, then Approve designs and notify customer. Current confirmed admin membership, payment and prior review are rechecked in SQL. Approval and its unique outbox entry commit together; repeated requests preserve the first approval and produce one email job. The app attempts immediate dispatch; the existing authenticated worker retries failures. The payment-confirmation job must be accepted before approval notification is claimed. Admin order email status now labels Design approval separately. Provider acceptance is not proof of inbox delivery.
+
+Customer copy says the owner will review the design and may contact them with questions. The approval-email sentence appears only when email sending is configured and the approval schema is available. Sandbox approval emails remain TEST-labelled, use the settled order recipient, include no private receipt link and do not authorize real production. The remote migration, actual approval and inbox delivery still need verification. Keep the email retry worker/scheduler running.

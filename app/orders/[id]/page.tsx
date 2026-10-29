@@ -53,7 +53,7 @@ export default async function OrderPage({
 
   if (error) {
     return (
-      <main className="mx-auto max-w-2xl px-5 py-12">
+      <main className="mobile-content mx-auto max-w-2xl px-5 py-12">
         <h1 className="text-3xl font-semibold">
           Unable to load your order
         </h1>
@@ -111,7 +111,7 @@ export default async function OrderPage({
     }).format(cents / 100);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-5 py-12">
+    <main className="mobile-content mx-auto w-full max-w-2xl px-5 py-12">
       <p className="text-sm font-medium text-amber-900">
         Sandbox order — no real payment
       </p>

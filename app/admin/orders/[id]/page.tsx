@@ -17,7 +17,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
     .select("id,status,paid_at,delivery_method,items,subtotal_cents,shipping_cents,tax_cents,total_cents,customer_details,fulfilment_status,fulfilment_updated_at")
     .eq("id", id).eq("status", "paid").maybeSingle();
   if (!error && !order) notFound();
-  if (error || !order) return <main className="mx-auto max-w-2xl px-5 py-12">
+  if (error || !order) return <main className="mobile-content mx-auto max-w-2xl px-5 py-12">
     <Link href="/admin/orders" className="text-sm underline">Back to orders</Link>
     <h1 className="mt-6 text-3xl font-semibold">Manage order</h1>
     <DismissibleNotice tone="error" className="mt-6">Unable to load this order. Check order management setup and try again.</DismissibleNotice>
@@ -25,7 +25,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
   const customer = orderContact(order.customer_details);
   const emails = await supabase.rpc("store_admin_email_status", { p_order_id: id });
   const items = order.items as { id: string; name: string; size: string | null; quantity: number; unit_cents: number; customization?: { designId: string; additionalComments?: string } }[];
-  return <main className="mx-auto w-full max-w-2xl px-5 py-12">
+  return <main className="mobile-content mx-auto w-full max-w-2xl px-5 py-12">
     <Link href="/admin/orders" className="text-sm underline">Back to orders</Link>
     <h1 className="mt-6 text-3xl font-semibold">Manage order</h1>
     <p className="mt-3 text-sm text-amber-900">Sandbox order · Payment confirmed</p>
@@ -34,6 +34,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
     <section className="mt-8 border-t border-gray-200 pt-6">
       <h2 className="text-xl font-semibold">Items</h2>
       {items.some(line => line.customization) && <a href={`/api/admin/orders/${id}/designs`} className="mt-3 inline-block text-sm underline">Download test design snapshots (JSON)</a>}
+      {items.some(line => line.customization) && <Link href={`/admin/orders/${id}/production`} className="mt-3 block text-sm underline">View custom designs and production sheet</Link>}
       <ul className="mt-4 space-y-3">{items.map(line => <li key={`${line.id}:${line.size}:${line.customization?.designId ?? "ready"}`} className="flex justify-between gap-4">
         <span>{line.name}{line.customization ? " (Custom design)" : ""}{line.size ? ` (${line.size})` : ""} × {line.quantity}</span><span>{orderMoney(line.unit_cents * line.quantity)}</span>{line.customization?.additionalComments && <p className="basis-full whitespace-pre-wrap text-sm">Comments: {line.customization.additionalComments}</p>}
       </li>)}</ul>
@@ -68,7 +69,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
       {emails.error ? <p className="mt-3 text-sm">Email status unavailable. Check email setup before relying on automatic notifications.</p>
         : !emails.data?.length ? <p className="mt-3 text-sm">No automatic emails recorded for this order.</p>
         : <ul className="mt-3 space-y-2 text-sm">{emails.data.map((email: { kind: string; state: string }) => <li key={email.kind}>
-          {email.kind === "payment_confirmed" ? "Payment confirmation" : email.kind === "ready_for_pickup" ? "Ready for pickup" : "Shipped"}: {email.state === "accepted" ? "Accepted for sending" : email.state === "review" ? "Needs attention — contact customer manually after checking Resend" : "Queued — awaiting sending or retry"}
+          {email.kind === "design_approved" ? "Design approval" : email.kind === "payment_confirmed" ? "Payment confirmation" : email.kind === "ready_for_pickup" ? "Ready for pickup" : "Shipped"}: {email.state === "accepted" ? "Accepted for sending" : email.state === "review" ? "Needs attention — contact customer manually after checking Resend" : "Queued — awaiting sending or retry"}
         </li>)}</ul>}
     </section>
   </main>;

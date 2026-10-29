@@ -8,5 +8,5 @@ export default async function ResetPasswordPage() {
   const supabase = await createAuthClient(true);
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user?.email_confirmed_at) redirect("/forgot-password");
-  return <main className="px-5 py-12"><AuthForm mode="reset-password" /></main>;
+  return <main className="mobile-content px-5 py-12"><AuthForm mode="reset-password" /></main>;
 }

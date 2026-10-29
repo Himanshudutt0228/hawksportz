@@ -36,3 +36,5 @@ Email/password authentication uses Supabase Auth and `@supabase/ssr`. The UI kee
 `node --experimental-strip-types --test lib/auth/validation.test.mjs` tests input and callback boundaries. `npx playwright test tests/auth.spec.ts` tests anonymous/forged-session access, invalid callbacks, forms, and navigation on desktop/mobile without creating users or sending emails.
 
 Before launch, use a controlled test mailbox to verify successful registration, confirmation, duplicate registration, valid/invalid login, session refresh, recovery, password change, replayed/expired links, and sign-out against the configured Supabase project. These require email delivery and dashboard setup; UI/security boundary tests do not replace them.
+
+Canonical production domain and migration checklist: [DOMAIN_MIGRATION.md](DOMAIN_MIGRATION.md).
