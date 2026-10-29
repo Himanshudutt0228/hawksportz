@@ -14,12 +14,49 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const auth = await createAuthClient(true);
   const { data: identity } = await auth.auth.getUser();
   const userId = identity.user?.email_confirmed_at ? identity.user.id : null;
-  if (!accessHash && !userId) notFound();
+
   const { data: order, error } = await orderDatabase().from("store_orders")
     .select("id,user_id,access_hash,status,delivery_method,items,subtotal_cents,shipping_cents,tax_cents,total_cents,stripe_session_id")
     .eq("id", id).maybeSingle();
   if (error) return <main className="mx-auto max-w-2xl px-5 py-12"><h1 className="text-3xl font-semibold">Unable to load your order</h1><p className="mt-4">Please try again shortly.</p></main>;
-  if (!order || !((accessHash !== null && order.access_hash === accessHash) || (userId !== null && order.user_id === userId))) notFound();
+  
+if (!order) notFound();
+
+const cookieAuthorized =
+  accessHash !== null && order.access_hash === accessHash;
+
+const userAuthorized =
+  userId !== null && order.user_id === userId;
+
+let stripeAuthorized = false;
+
+if (
+  !cookieAuthorized &&
+  !userAuthorized &&
+  order.status === "paid" &&
+  order.stripe_session_id?.startsWith("cs_test_")
+) {
+  try {
+    const session = await checkoutStripe().checkout.sessions.retrieve(
+      order.stripe_session_id
+    );
+
+    stripeAuthorized =
+      !session.livemode &&
+      session.id === order.stripe_session_id &&
+      session.metadata?.order_id === order.id &&
+      session.client_reference_id === order.id &&
+      session.status === "complete" &&
+      ["paid", "no_payment_required"].includes(session.payment_status);
+  } catch {
+    stripeAuthorized = false;
+  }
+}
+
+if (!cookieAuthorized && !userAuthorized && !stripeAuthorized) {
+  notFound();
+}
+
   let resumeUrl: string | null = null;
   if (order.status === "open" && order.stripe_session_id) {
     try {
