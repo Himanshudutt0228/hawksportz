@@ -3,7 +3,7 @@
 import { loadDesign } from "@/lib/design-storage";
 import { itemKey } from "@/lib/cart";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import DismissibleNotice from "@/components/DismissibleNotice";
 import { pickupInstructions, shippingCents, type DeliveryMethod } from "@/lib/checkout";
@@ -13,6 +13,15 @@ export default function CheckoutForm({ enabled, noTax, customEnabled }: { enable
   const [method, setMethod] = useState<DeliveryMethod>("shipping");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+  const resetBusy = () => setBusy(false);
+
+  window.addEventListener("pageshow", resetBusy);
+
+  return () => {
+    window.removeEventListener("pageshow", resetBusy);
+  };
+}, []);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   if (!ready) return <p className="mt-6" role="status">Loading your cart...</p>;
   if (!items.length) return <p className="mt-6">Your cart is empty. <Link href="/product" className="underline">Shop products</Link></p>;
